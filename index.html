@@ -1,201 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI & Startup News Aggregator</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    #news-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
-      margin-top: 20px;
-    }
-    .news-card {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-    }
-    .news-card img {
-      width: 100%;
-      height: 150px;
-      object-fit: cover;
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-    .news-card h3 {
-      margin: 0 0 10px;
-      font-size: 18px;
-      color: #222;
-    }
-    .news-card p {
-      flex: 1;
-      font-size: 14px;
-      color: #555;
-    }
-    .news-card a {
-      margin-top: 10px;
-      text-decoration: none;
-      color: #007bff;
-      font-weight: bold;
-    }
-    .news-card small {
-      margin-top: 5px;
-      color: #888;
-    }
-    .category {
-      font-size: 16px;
-      font-weight: bold;
-      margin-top: 10px;
-      color: #444;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI & Startup News – NewsData.io</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f2f4f7;
+  margin: 0;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #222;
+}
+
+select {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  display: block;
+  margin: 20px auto;
+}
+
+#news {
+  column-count: 3;
+  column-gap: 25px;
+}
+
+@media (max-width: 1000px) {
+  #news { column-count: 2; }
+}
+
+@media (max-width: 600px) {
+  #news { column-count: 1; }
+}
+
+.card {
+  background: #fff;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  display: inline-block;
+  width: 100%;
+}
+
+.card img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.card h3 {
+  font-size: 18px;
+  margin: 0 0 10px;
+}
+
+.card p {
+  font-size: 14px;
+  color: #555;
+}
+
+.card a {
+  color: #0066ff;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.meta {
+  font-size: 12px;
+  color: #777;
+  margin-top: 6px;
+}
+
+.category {
+  margin-top: 8px;
+  font-weight: bold;
+  color: #333;
+}
+</style>
 </head>
+
 <body>
 
-<h1>AI & Startup News Aggregator</h1>
-<div id="news-container">Loading news...</div>
+<h1>AI, Startup & IT News</h1>
+
+<select id="country">
+  <option value="pl,cz,sk,hu,ro,bg,lt,lv,ee">Eastern Europe</option>
+  <option value="kz">Kazakhstan</option>
+  <option value="kg">Kyrgyzstan</option>
+  <option value="tj">Tajikistan</option>
+  <option value="jp">Japan</option>
+  <option value="us">USA</option>
+  <option value="ru">Russia</option>
+</select>
+
+<div id="news">Loading news...</div>
 
 <script>
-const newsContainer = document.getElementById("news-container");
+const API_KEY = "pub_9a3fba3935fd420c82d90ff6dbc06f44";
+const newsDiv = document.getElementById("news");
+const countrySelect = document.getElementById("country");
 
-// ==== API KEYS ====
-const newsAPIKey = "fa0198697c1d4920b5e53f032edd6968";
-const gNewsKey = "498173e0382c718bee1d05181386660c";
-
-// ==== KEYWORDS FOR CATEGORIES ====
-const categories = {
-  AI: /AI|artificial intelligence|machine learning|ML|deep learning|LLM/i,
-  Startup: /startup|founder|venture|VC|funding|incubator|accelerator/i,
-  Grants: /grant|support/i
+const CATEGORY_RULES = {
+  "AI": /AI|artificial intelligence|machine learning|LLM|neural/i,
+  "Startup": /startup|founder|venture|VC|funding|accelerator|incubator/i,
+  "Grants": /grant|subsidy|government support|state funding|policy/i
 };
 
-// ==== 1. Fetch NewsAPI ====
-async function fetchNewsAPI() {
-  const query = "AI OR artificial intelligence OR startup OR venture OR grant OR policy";
-  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&pageSize=20&sortBy=publishedAt&apiKey=${newsAPIKey}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  return data.articles.map(a => ({
-    title: a.title,
-    description: a.description,
-    url: a.url,
-    image: a.urlToImage,
-    publishedAt: a.publishedAt,
-    source: a.source.name
-  }));
-}
+countrySelect.addEventListener("change", loadNews);
 
-// ==== 2. Fetch GNews API ====
-async function fetchGNews() {
-  const query = "AI OR startup OR grant OR policy";
-  const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=20&token=${gNewsKey}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  return data.articles.map(a => ({
-    title: a.title,
-    description: a.description,
-    url: a.url,
-    image: a.image,
-    publishedAt: a.publishedAt,
-    source: a.source.name
-  }));
-}
-
-// ==== 3. Fetch RSS Feeds ====
-async function fetchRSS(rssUrl) {
-  const encodedUrl = encodeURIComponent(rssUrl);
-  const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodedUrl}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  return data.items
-    .filter(a => /AI|artificial intelligence|startup|venture|grant|policy/i.test(a.title + " " + a.description))
-    .map(a => ({
-      title: a.title,
-      description: a.description,
-      url: a.link,
-      image: a.enclosure ? a.enclosure.link : null,
-      publishedAt: a.pubDate,
-      source: data.feed.title
-    }));
-}
-
-// ==== 4. Assign category ====
-function assignCategory(article) {
-  for (const cat in categories) {
-    if (categories[cat].test(article.title + " " + article.description)) {
-      article.category = cat;
-      return article;
-    }
-  }
-  article.category = "Other";
-  return article;
-}
-
-// ==== 5. Merge & Display ====
-async function displayNews() {
+async function loadNews() {
   try {
-    newsContainer.innerHTML = "Loading news...";
+    newsDiv.innerHTML = "Loading news...";
 
-    const [newsAPI, gNews, rssTechCrunch, rssVentureBeat] = await Promise.all([
-      fetchNewsAPI(),
-      fetchGNews(),
-      fetchRSS("https://techcrunch.com/feed/"),
-      fetchRSS("https://venturebeat.com/feed/")
-    ]);
+    const countries = countrySelect.value;
+    const query = "AI OR startup OR technology OR grants OR policy";
 
-    let allArticles = [...newsAPI, ...gNews, ...rssTechCrunch, ...rssVentureBeat];
+    const url = `https://newsdata.io/api/1/news?apikey=${API_KEY}&q=${encodeURIComponent(query)}&country=${countries}&language=en`;
 
-    // Assign categories
-    allArticles = allArticles.map(assignCategory);
+    const res = await fetch(url);
+    const data = await res.json();
 
-    // Remove duplicates
+    let articles = data.results || [];
+
+    articles = articles
+      .map(a => ({
+        title: a.title,
+        description: a.description,
+        link: a.link,
+        image: a.image_url,
+        pubDate: a.pubDate,
+        source: a.source_id,
+        content: (a.title || "") + " " + (a.description || "")
+      }))
+      .map(assignCategory)
+      .filter(Boolean);
+
     const seen = new Set();
-    allArticles = allArticles.filter(a => {
+    articles = articles.filter(a => {
       if (seen.has(a.title)) return false;
       seen.add(a.title);
       return true;
     });
 
-    // Sort by date
-    allArticles.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+    articles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-    // Display
-    newsContainer.innerHTML = "";
-    allArticles.forEach(article => {
+    newsDiv.innerHTML = "";
+
+    articles.forEach(a => {
       const card = document.createElement("div");
-      card.className = "news-card";
+      card.className = "card";
       card.innerHTML = `
-        ${article.image ? `<img src="${article.image}" alt="news image">` : ""}
-        <h3>${article.title}</h3>
-        <p>${article.description || ""}</p>
-        <a href="${article.url}" target="_blank">Read more</a>
-        <small>${new Date(article.publishedAt).toLocaleString()} | ${article.source}</small>
-        <div class="category">Category: ${article.category}</div>
+        ${a.image ? `<img src="${a.image}">` : ""}
+        <h3>${a.title}</h3>
+        <p>${a.description || ""}</p>
+        <a href="${a.link}" target="_blank">Read more</a>
+        <div class="meta">${new Date(a.pubDate).toLocaleString()} | ${a.source}</div>
+        <div class="category">${a.category}</div>
       `;
-      newsContainer.appendChild(card);
+      newsDiv.appendChild(card);
     });
-    
-  } catch (error) {
-    console.error("Error fetching news:", error);
-    newsContainer.innerHTML = "<p>Failed to load news.</p>";
+
+    if (!articles.length) {
+      newsDiv.innerHTML = "No relevant news found.";
+    }
+
+  } catch (err) {
+    console.error(err);
+    newsDiv.innerHTML = "Failed to load news.";
   }
 }
 
-displayNews();
+function assignCategory(article) {
+  for (const key in CATEGORY_RULES) {
+    if (CATEGORY_RULES[key].test(article.content)) {
+      article.category = key;
+      return article;
+    }
+  }
+  return null;
+}
+
+loadNews();
 </script>
 
 </body>
