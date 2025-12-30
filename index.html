@@ -14,26 +14,26 @@
 <h1>AI, Startup & IT News</h1>
 
 <select id="country">
-  <option value="pl,cz,sk,hu,ro,bg,lt,lv,ee">Eastern Europe</option>
   <option value="kz">Kazakhstan</option>
-  <option value="kg">Kyrgyzstan</option>
+  <option value="in">India</option>
   <option value="tj">Tajikistan</option>
   <option value="jp">Japan</option>
-  <option value="us">USA</option>
+  <option value="us" selected>USA</option>
   <option value="ru">Russia</option>
 </select>
+
 
 <div id="news">Loading news...</div>
 
 <script>
-const API_KEY = "pub_9a3fba3935fd420c82d90ff6dbc06f44";
+const API_KEY = "498173e0382c718bee1d05181386660c";
 const newsDiv = document.getElementById("news");
 const countrySelect = document.getElementById("country");
 
 const CATEGORY_RULES = {
-  "AI": /AI|artificial intelligence|machine learning|LLM|neural/i,
-  "Startup": /startup|founder|venture|VC|funding|accelerator|incubator/i,
-  "Grants": /grant|subsidy|government support|state funding|policy/i
+  AI: /AI|artificial intelligence|machine learning|LLM|neural/i,
+  Startup: /startup|founder|venture|VC|funding|accelerator|incubator/i,
+  Grants: /grant|subsidy|government|policy|regulation|state support/i
 };
 
 countrySelect.addEventListener("change", loadNews);
@@ -42,29 +42,30 @@ async function loadNews() {
   try {
     newsDiv.innerHTML = "Loading news...";
 
-    const countries = countrySelect.value;
-    const query = "AI OR startup OR technology OR grants OR policy";
+    const country = countrySelect.value;
+    const query = "AI OR artificial intelligence OR startup OR technology OR grants OR policy";
 
-    const url = `https://newsdata.io/api/1/news?apikey=${API_KEY}&q=${encodeURIComponent(query)}&country=${countries}&language=en`;
+    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&country=${country}&max=20&token=${API_KEY}`;
 
     const res = await fetch(url);
     const data = await res.json();
 
-    let articles = data.results || [];
+    let articles = data.articles || [];
 
     articles = articles
       .map(a => ({
         title: a.title,
         description: a.description,
-        link: a.link,
-        image: a.image_url,
-        pubDate: a.pubDate,
-        source: a.source_id,
-        content: (a.title || "") + " " + (a.description || "")
+        link: a.url,
+        image: a.image,
+        publishedAt: a.publishedAt,
+        source: a.source.name,
+        content: `${a.title} ${a.description}`
       }))
       .map(assignCategory)
       .filter(Boolean);
 
+    // Remove duplicates
     const seen = new Set();
     articles = articles.filter(a => {
       if (seen.has(a.title)) return false;
@@ -72,7 +73,8 @@ async function loadNews() {
       return true;
     });
 
-    articles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+    // Sort newest first
+    articles.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 
     newsDiv.innerHTML = "";
 
@@ -80,11 +82,11 @@ async function loadNews() {
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
-        ${a.image ? `<img src="${a.image}">` : ""}
+        ${a.image ? `<img src="${a.image}" alt="">` : ""}
         <h3>${a.title}</h3>
         <p>${a.description || ""}</p>
-        <a href="${a.link}" target="_blank">Read more</a>
-        <div class="meta">${new Date(a.pubDate).toLocaleString()} | ${a.source}</div>
+        <a href="${a.link}" target="_blank">Read more →</a>
+        <div class="meta">${new Date(a.publishedAt).toLocaleString()} | ${a.source}</div>
         <div class="category">${a.category}</div>
       `;
       newsDiv.appendChild(card);
@@ -107,11 +109,12 @@ function assignCategory(article) {
       return article;
     }
   }
-  return null;
+  return null; // remove unrelated news
 }
 
 loadNews();
 </script>
+
 
 </body>
 </html>
